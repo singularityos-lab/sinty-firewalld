@@ -36,7 +36,7 @@ type State struct {
 }
 
 func Default() State {
-	return State{Enabled: true, Profile: Home}
+	return State{Profile: Home}
 }
 
 var (

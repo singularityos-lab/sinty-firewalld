@@ -13,7 +13,8 @@ home networks, then one rule per app. Each app rule carries the app's label as
 its comment, so `nft list ruleset` shows who opened what. The whole table is
 replaced in one batch: the kernel never holds half a ruleset.
 
-On a public network only the apps allowed there too keep their ports, and mDNS
+The firewall starts off until it is turned on; the setting is kept in
+`/var/lib/sinty-firewalld/state.json`. On a public network only the apps allowed there too keep their ports, and mDNS
 is closed. With the firewall off the table is removed.
 
 ## D-Bus

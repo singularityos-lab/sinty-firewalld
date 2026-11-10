@@ -70,6 +70,7 @@ func TestSaveLoad(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	s, _ := Default().Allow(Rule{ID: "ssh", Ports: "22/tcp", Label: "Remote Login"})
 	s.Profile = Public
+	s.Enabled = true
 	if err := s.Save(path); err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +82,7 @@ func TestSaveLoad(t *testing.T) {
 		t.Fatalf("round trip %+v", back)
 	}
 	missing, err := Load(filepath.Join(t.TempDir(), "none.json"))
-	if err != nil || !missing.Enabled || missing.Profile != Home {
+	if err != nil || missing.Enabled || missing.Profile != Home {
 		t.Fatalf("default %+v %v", missing, err)
 	}
 }

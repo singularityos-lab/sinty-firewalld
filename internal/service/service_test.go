@@ -82,7 +82,7 @@ func TestBusErrors(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 	enabled, profile, rules, _ := o.Status()
-	if !enabled || profile != "home" || len(rules) != 0 {
+	if enabled || profile != "home" || len(rules) != 0 {
 		t.Fatalf("status %v %v %v", enabled, profile, rules)
 	}
 }
