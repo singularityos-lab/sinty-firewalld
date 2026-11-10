@@ -2,4 +2,3 @@
 Name=dev.sinty.Firewall1
 Exec=/usr/libexec/sinty-firewalld
 User=root
-SystemdService=sinty-firewalld.service
