@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -13,7 +14,9 @@ import (
 	"github.com/singularityos-lab/libsingularity/src/system/core/go/sintysystem"
 
 	"github.com/singularityos-lab/sinty-firewalld/internal/kernel"
+	"github.com/singularityos-lab/sinty-firewalld/internal/netkind"
 	"github.com/singularityos-lab/sinty-firewalld/internal/service"
+	"github.com/singularityos-lab/sinty-firewalld/internal/state"
 )
 
 func main() {
@@ -55,6 +58,13 @@ func main() {
 	if err != nil || reply != dbus.RequestNameReplyPrimaryOwner {
 		log.Fatalf("cannot own %s: %v", service.Name, err)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go netkind.Follow(ctx, netkind.Dir, func(p state.Profile) {
+		if err := svc.SetProfile(string(p)); err != nil {
+			log.Printf("following the network: %v", err)
+		}
+	})
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
