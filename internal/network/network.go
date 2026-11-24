@@ -1,36 +1,34 @@
-// Package netkind follows the kind of network sinty-nm reports for the
+// Package network follows the kind of network sinty-nm reports for the
 // current connection, so the firewall profile matches where the device is.
-package netkind
+package network
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
 
+	"github.com/singularityos-lab/libsingularity/src/system/core/go/netkind"
+
 	"github.com/singularityos-lab/sinty-firewalld/internal/state"
 )
 
-const Dir = "/run/sinty-nm"
+const Dir = netkind.Dir
 
-func ProfileFor(kind string) state.Profile {
-	switch strings.TrimSpace(kind) {
-	case "home", "work":
+func ProfileFor(k netkind.Kind) state.Profile {
+	if k.Private() {
 		return state.Home
 	}
 	return state.Public
 }
 
 func Read(dir string) (state.Profile, bool) {
-	b, err := os.ReadFile(filepath.Join(dir, "network-kind"))
-	if err != nil {
+	k, ok := netkind.Read(dir)
+	if !ok {
 		return "", false
 	}
-	return ProfileFor(string(b)), true
+	return ProfileFor(k), true
 }
 
 func Follow(ctx context.Context, dir string, set func(state.Profile)) {

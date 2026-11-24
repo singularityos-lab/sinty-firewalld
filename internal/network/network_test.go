@@ -1,4 +1,4 @@
-package netkind
+package network
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/singularityos-lab/libsingularity/src/system/core/go/netkind"
 
 	"github.com/singularityos-lab/sinty-firewalld/internal/state"
 )
@@ -15,7 +17,7 @@ func TestOnlyKnownPrivateNetworksOpenTheHomeProfile(t *testing.T) {
 		"home\n": state.Home, "work": state.Home, "public": state.Public,
 		"none": state.Public, "": state.Public, "garbage": state.Public,
 	} {
-		if got := ProfileFor(kind); got != want {
+		if got := ProfileFor(netkind.Parse(kind)); got != want {
 			t.Errorf("%q: %s, want %s", kind, got, want)
 		}
 	}

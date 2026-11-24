@@ -14,7 +14,7 @@ import (
 	"github.com/singularityos-lab/libsingularity/src/system/core/go/sintysystem"
 
 	"github.com/singularityos-lab/sinty-firewalld/internal/kernel"
-	"github.com/singularityos-lab/sinty-firewalld/internal/netkind"
+	"github.com/singularityos-lab/sinty-firewalld/internal/network"
 	"github.com/singularityos-lab/sinty-firewalld/internal/service"
 	"github.com/singularityos-lab/sinty-firewalld/internal/state"
 )
@@ -60,7 +60,7 @@ func main() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go netkind.Follow(ctx, netkind.Dir, func(p state.Profile) {
+	go network.Follow(ctx, network.Dir, func(p state.Profile) {
 		if err := svc.SetProfile(string(p)); err != nil {
 			log.Printf("following the network: %v", err)
 		}
