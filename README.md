@@ -17,6 +17,11 @@ The firewall starts off until it is turned on; the setting is kept in
 `/var/lib/sinty-firewalld/state.json`. On a public network only the apps allowed there too keep their ports, and mDNS
 is closed. With the firewall off the table is removed.
 
+The profile follows the network type sinty-nm reports for the current
+connection in `/run/sinty-nm/network-kind`: `home` and `work` select the home
+profile, anything else the public one. `SetProfile` overrides it until the
+network changes.
+
 ## D-Bus
 
 Name `dev.sinty.Firewall1`, object `/dev/sinty/Firewall1`, interface
@@ -26,7 +31,7 @@ Name `dev.sinty.Firewall1`, object `/dev/sinty/Firewall1`, interface
 | --- | --- | --- |
 | `Status` | `() -> (b enabled, s profile, a(sbss) rules)` | a rule is id, public too, ports, label |
 | `SetEnabled` | `(b)` | |
-| `SetProfile` | `(s)` | `home` or `public` |
+| `SetProfile` | `(s)` | `home` or `public`, until the network changes |
 | `Allow` | `(s id, b public_too, s ports, s label)` | replaces the rule with the same id |
 | `Revoke` | `(s id)` | |
 | `Changed` | signal, same arguments as `Status` | |
