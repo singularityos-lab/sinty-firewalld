@@ -13,6 +13,16 @@ home networks, then one rule per app. Each app rule carries the app's label as
 its comment, so `nft list ruleset` shows who opened what. The whole table is
 replaced in one batch: the kernel never holds half a ruleset.
 
+System services declare the ports they receive connections on in
+`/usr/share/sinty-firewalld/services/NAME.json`, and an administrator can
+replace one in `/etc/sinty-firewalld/services/NAME.json`:
+
+    {"label": "Sinty Core", "ports": "7412/tcp,7413/udp", "public_too": false}
+
+They are applied with the app rules from boot, follow the same profile rule,
+are not kept in the state file and cannot be revoked over D-Bus. An `Allow` for
+the same id and ports succeeds without changing anything.
+
 The firewall starts off until it is turned on; the setting is kept in
 `/var/lib/sinty-firewalld/state.json`. On a public network only the apps allowed there too keep their ports, and mDNS
 is closed. With the firewall off the table is removed.
@@ -34,6 +44,7 @@ Name `dev.sinty.Firewall1`, object `/dev/sinty/Firewall1`, interface
 | `SetProfile` | `(s)` | `home` or `public`, until the network changes |
 | `Allow` | `(s id, b public_too, s ports, s label)` | replaces the rule with the same id |
 | `Revoke` | `(s id)` | |
+| `SystemRules` | `() -> a(sbss)` | the rules system services declare |
 | `Changed` | signal, same arguments as `Status` | |
 
 Ports are `22/tcp`, `5353/udp` or `8000-8010/tcp`, comma separated, at most 16
@@ -48,7 +59,7 @@ and `CONFIG_NF_CONNTRACK`.
 
 ## Usage
 
-    sinty-firewalld [-state /var/lib/sinty-firewalld/state.json]
+    sinty-firewalld [-state /var/lib/sinty-firewalld/state.json] [-services DIR:DIR]
     sinty-firewalld -show     # what the kernel holds now
 
 ## Build

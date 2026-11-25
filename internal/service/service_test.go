@@ -27,7 +27,7 @@ func (r *recorder) Apply(s state.State) error {
 func newService(t *testing.T) (*Service, *recorder, string) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	rec := &recorder{}
-	s, err := New(path, rec)
+	s, err := New(path, nil, rec)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestStartAppliesSavedState(t *testing.T) {
 	if err := s.Allow(state.Rule{ID: "ssh", Ports: "22/tcp", Label: "Remote Login"}); err != nil {
 		t.Fatal(err)
 	}
-	again, _ := New(path, rec)
+	again, _ := New(path, nil, rec)
 	rec.applied = nil
 	if err := again.Start(); err != nil {
 		t.Fatal(err)
@@ -97,5 +97,32 @@ func TestProfileSwitchAppliesActiveRules(t *testing.T) {
 	last := rec.applied[len(rec.applied)-1]
 	if last.Profile != state.Public || len(last.Active()) != 1 {
 		t.Fatalf("public ruleset %+v", last)
+	}
+}
+
+func TestSystemServicesReachTheKernelButNotTheFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	rec := &recorder{}
+	core := state.Rule{ID: "sinty-core", Ports: "7412/tcp,7413/udp", Label: "Sinty Core"}
+	s, err := New(path, []state.Rule{core}, rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetEnabled(true); err != nil {
+		t.Fatal(err)
+	}
+	active := rec.applied[len(rec.applied)-1].Active()
+	if len(active) != 1 || active[0] != core {
+		t.Fatalf("kernel got %+v", active)
+	}
+	if err := s.Revoke("sinty-core"); !errors.Is(err, state.ErrSystem) {
+		t.Fatalf("revoke: %v", err)
+	}
+	if rules, _ := (&object{s}).SystemRules(); len(rules) != 1 || rules[0].ID != "sinty-core" {
+		t.Fatalf("SystemRules: %+v", rules)
+	}
+	saved, _ := state.Load(path)
+	if len(saved.Rules) != 0 {
+		t.Fatalf("saved %+v", saved.Rules)
 	}
 }

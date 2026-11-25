@@ -1,6 +1,8 @@
 package state
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -84,5 +86,58 @@ func TestSaveLoad(t *testing.T) {
 	missing, err := Load(filepath.Join(t.TempDir(), "none.json"))
 	if err != nil || missing.Enabled || missing.Profile != Home {
 		t.Fatalf("default %+v %v", missing, err)
+	}
+}
+
+func TestSystemServices(t *testing.T) {
+	shipped, local := t.TempDir(), t.TempDir()
+	write := func(dir, name, body string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(shipped, "sinty-core.json", `{"label": "Sinty Core", "ports": "7412/tcp,7413/udp"}`)
+	write(shipped, "nearby.json", `{"label": "Nearby", "ports": "1714-1764/tcp,1714-1764/udp"}`)
+	write(shipped, "broken.json", `{"label": "Broken", "ports": "80/sctp"}`)
+	write(local, "nearby.json", `{"label": "Nearby", "ports": "1716/tcp,1716/udp", "public_too": true}`)
+
+	sys := LoadServices(shipped, local, filepath.Join(local, "missing"))
+	if len(sys) != 2 {
+		t.Fatalf("services: %+v", sys)
+	}
+	byID := map[string]Rule{}
+	for _, r := range sys {
+		byID[r.ID] = r
+	}
+	if byID["sinty-core"].Ports != "7412/tcp,7413/udp" || byID["nearby"].Ports != "1716/tcp,1716/udp" || !byID["nearby"].PublicToo {
+		t.Fatalf("services: %+v", sys)
+	}
+
+	s := Default()
+	s.System = sys
+	s, _ = s.Allow(Rule{ID: "ssh", Ports: "22/tcp", Label: "Remote Login"})
+	if got := len(s.Active()); got != 3 {
+		t.Fatalf("home profile keeps %d rules", got)
+	}
+	s.Profile = Public
+	if a := s.Active(); len(a) != 1 || a[0].ID != "nearby" {
+		t.Fatalf("public profile keeps %+v", a)
+	}
+	if _, err := s.Revoke("sinty-core"); !errors.Is(err, ErrSystem) {
+		t.Fatalf("revoking a system service: %v", err)
+	}
+	if _, err := s.Allow(Rule{ID: "sinty-core", Ports: "1/tcp", Label: "x"}); !errors.Is(err, ErrSystem) {
+		t.Fatalf("replacing a system service: %v", err)
+	}
+	if same, err := s.Allow(Rule{ID: "nearby", Ports: "1716/tcp,1716/udp", Label: "Nearby", PublicToo: true}); err != nil || len(same.Rules) != 1 {
+		t.Fatalf("asking for what a system service opens: %v %+v", err, same.Rules)
+	}
+	path := filepath.Join(t.TempDir(), "state.json")
+	if err := s.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	back, err := Load(path)
+	if err != nil || len(back.Rules) != 1 || len(back.System) != 0 {
+		t.Fatalf("saved state carries system services: %+v %v", back, err)
 	}
 }

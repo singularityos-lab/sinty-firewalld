@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
@@ -21,6 +22,7 @@ import (
 
 func main() {
 	statePath := flag.String("state", "/var/lib/sinty-firewalld/state.json", "where the firewall settings are kept")
+	services := flag.String("services", "/usr/share/sinty-firewalld/services:/etc/sinty-firewalld/services", "colon separated directories where system services declare their ports")
 	show := flag.Bool("show", false, "print the ruleset the kernel holds and exit")
 	flag.Parse()
 	log.SetFlags(0)
@@ -39,7 +41,7 @@ func main() {
 		return
 	}
 
-	svc, err := service.New(*statePath, kernel.Nftables{})
+	svc, err := service.New(*statePath, state.LoadServices(strings.Split(*services, ":")...), kernel.Nftables{})
 	if err != nil {
 		log.Fatal(err)
 	}

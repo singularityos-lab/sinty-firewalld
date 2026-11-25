@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -33,6 +35,7 @@ type State struct {
 	Enabled bool    `json:"enabled"`
 	Profile Profile `json:"profile"`
 	Rules   []Rule  `json:"rules"`
+	System  []Rule  `json:"-"`
 }
 
 func Default() State {
@@ -45,6 +48,7 @@ var (
 	ErrPorts   = errors.New("ports are a comma separated list of PORT/tcp, PORT/udp or FIRST-LAST/tcp")
 	ErrProfile = errors.New("the profile is home or public")
 	ErrFull    = fmt.Errorf("at most %d apps can receive connections", MaxRules)
+	ErrSystem  = errors.New("this rule belongs to a system service")
 )
 
 func ValidID(id string) error {
@@ -102,9 +106,24 @@ func ParseProfile(s string) (Profile, error) {
 	return "", ErrProfile
 }
 
+func (s State) system(id string) (Rule, bool) {
+	for _, r := range s.System {
+		if r.ID == id {
+			return r, true
+		}
+	}
+	return Rule{}, false
+}
+
 func (s State) Allow(r Rule) (State, error) {
 	if err := ValidID(r.ID); err != nil {
 		return s, err
+	}
+	if sys, ok := s.system(r.ID); ok {
+		if sys.Ports == r.Ports && sys.PublicToo == r.PublicToo {
+			return s, nil
+		}
+		return s, ErrSystem
 	}
 	if err := ValidLabel(r.Label); err != nil {
 		return s, err
@@ -130,6 +149,9 @@ func (s State) Revoke(id string) (State, error) {
 	if err := ValidID(id); err != nil {
 		return s, err
 	}
+	if _, ok := s.system(id); ok {
+		return s, ErrSystem
+	}
 	out := s.clone()
 	out.Rules = out.Rules[:0]
 	for _, r := range s.Rules {
@@ -147,10 +169,10 @@ func (s State) clone() State {
 }
 
 // Active lists the rules that apply under the current profile: on a public
-// network only the apps that asked to be reachable there too.
+// network only the services and apps that asked to be reachable there too.
 func (s State) Active() []Rule {
 	var out []Rule
-	for _, r := range s.Rules {
+	for _, r := range append(append([]Rule(nil), s.System...), s.Rules...) {
 		if s.Profile == Public && !r.PublicToo {
 			continue
 		}
@@ -212,4 +234,44 @@ func (s State) Save(path string) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// LoadServices reads the ports system services declare, one NAME.json file per
+// service holding {"label", "ports", "public_too"}. A file in a later directory
+// replaces the one with the same name in an earlier directory, so /etc can
+// override what a package ships.
+func LoadServices(dirs ...string) []Rule {
+	byID := map[string]Rule{}
+	var order []string
+	for _, dir := range dirs {
+		files, _ := filepath.Glob(filepath.Join(dir, "*.json"))
+		sort.Strings(files)
+		for _, f := range files {
+			id := strings.TrimSuffix(filepath.Base(f), ".json")
+			data, err := os.ReadFile(f)
+			if err != nil {
+				log.Printf("%s: %v", f, err)
+				continue
+			}
+			var r Rule
+			if err := json.Unmarshal(data, &r); err != nil {
+				log.Printf("%s: %v", f, err)
+				continue
+			}
+			r.ID = id
+			if err := errors.Join(ValidID(r.ID), ValidLabel(r.Label), ValidPorts(r.Ports)); err != nil {
+				log.Printf("%s: %v", f, err)
+				continue
+			}
+			if _, seen := byID[id]; !seen {
+				order = append(order, id)
+			}
+			byID[id] = r
+		}
+	}
+	out := make([]Rule, 0, len(order))
+	for _, id := range order {
+		out = append(out, byID[id])
+	}
+	return out
 }

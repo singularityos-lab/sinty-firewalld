@@ -36,11 +36,12 @@ type Service struct {
 	emit      func(state.State)
 }
 
-func New(path string, apply Applier) (*Service, error) {
+func New(path string, system []state.Rule, apply Applier) (*Service, error) {
 	s, err := state.Load(path)
 	if err != nil {
 		log.Printf("state: %v, starting from defaults", err)
 	}
+	s.System = system
 	return &Service{cur: s, path: path, apply: apply, emit: func(state.State) {}}, nil
 }
 
@@ -88,11 +89,15 @@ type Rule struct {
 }
 
 func wire(st state.State) (bool, string, []Rule) {
-	rules := make([]Rule, 0, len(st.Rules))
-	for _, r := range st.Rules {
+	return st.Enabled, string(st.Profile), wireRules(st.Rules)
+}
+
+func wireRules(in []state.Rule) []Rule {
+	rules := make([]Rule, 0, len(in))
+	for _, r := range in {
 		rules = append(rules, Rule{r.ID, r.PublicToo, r.Ports, r.Label})
 	}
-	return st.Enabled, string(st.Profile), rules
+	return rules
 }
 
 // change applies next to the kernel first and saves it only when that worked,
@@ -175,7 +180,7 @@ func failure(err error) *dbus.Error {
 	if err == nil {
 		return nil
 	}
-	for _, bad := range []error{state.ErrID, state.ErrLabel, state.ErrPorts, state.ErrProfile, state.ErrFull} {
+	for _, bad := range []error{state.ErrID, state.ErrLabel, state.ErrPorts, state.ErrProfile, state.ErrFull, state.ErrSystem} {
 		if errors.Is(err, bad) {
 			return dbus.NewError(Iface+".Error.Invalid", []interface{}{err.Error()})
 		}
@@ -186,6 +191,10 @@ func failure(err error) *dbus.Error {
 func (o *object) Status() (bool, string, []Rule, *dbus.Error) {
 	enabled, profile, rules := wire(o.s.State())
 	return enabled, profile, rules, nil
+}
+
+func (o *object) SystemRules() ([]Rule, *dbus.Error) {
+	return wireRules(o.s.State().System), nil
 }
 
 func (o *object) SetEnabled(sender dbus.Sender, on bool) *dbus.Error {
