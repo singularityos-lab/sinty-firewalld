@@ -1,6 +1,6 @@
 github.com/godbus/dbus/v5 v5.2.2 h1:TUR3TgtSVDmjiXOgAAyaZbYmIeP3DPkld3jgKGV8mXQ=
 github.com/godbus/dbus/v5 v5.2.2/go.mod h1:3AAv2+hPq5rdnr5txxxRwiGjPXamgoIHgz9FPBfOp3c=
-github.com/singularityos-lab/libsingularity/src/system/core/go v0.0.0-20261124190041-c7419766d06e h1:/0V+ckqP2Z4rqbfQWhTg0kcl4LCATgOYxQxQf2wj7DE=
-github.com/singularityos-lab/libsingularity/src/system/core/go v0.0.0-20261124190041-c7419766d06e/go.mod h1:1y9eGHHWkbi4hIVqp5mb0eZTDDrSZ35zfl1dWZkUAmg=
+github.com/singularityos-lab/libsingularity/src/system/core/go v0.0.0-20261125221814-9be3a9dc4476 h1:wV3Fg5X58VNcwgcG6Na18hV+pXijQRPVZ1mioX9TfcY=
+github.com/singularityos-lab/libsingularity/src/system/core/go v0.0.0-20261125221814-9be3a9dc4476/go.mod h1:xcDhgqbRfCWp+tX052LmN5JltZ72SWiTnFTm0jURylo=
 golang.org/x/sys v0.27.0 h1:wBqf8DvsY9Y/2P8gAfPDEYNuS30J4lPHJxXSb/nJZ+s=
 golang.org/x/sys v0.27.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
